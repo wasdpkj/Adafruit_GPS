@@ -61,6 +61,7 @@
 #endif
 #include <Adafruit_PMTK.h>
 #include <NMEA_data.h>
+#include <GPS_CMD_HEX.h>
 #include <SPI.h>
 #include <Wire.h>
 
@@ -83,14 +84,14 @@ typedef enum {
 class Adafruit_GPS : public Print {
 public:
   // Adafruit_GPS.cpp
-  bool begin(uint32_t baud_or_i2caddr);
+  bool begin(uint32_t baud_or_i2caddr, int8_t pin_rx_sda = -1, int8_t pin_tx_scl = -1);
 
 #ifdef USE_SW_SERIAL
   Adafruit_GPS(SoftwareSerial *ser); // Constructor when using SoftwareSerial
 #endif
-  Adafruit_GPS(HardwareSerial *ser); // Constructor when using HardwareSerial
+  Adafruit_GPS(HardwareSerial *ser, int8_t pin_rx_sda = -1, int8_t pin_tx_scl = -1); // Constructor when using HardwareSerial
   Adafruit_GPS(Stream *data);        // Constructor when using Stream
-  Adafruit_GPS(TwoWire *theWire);    // Constructor when using I2C
+  Adafruit_GPS(TwoWire *theWire, int8_t pin_rx_sda = -1, int8_t pin_tx_scl = -1);    // Constructor when using I2C
   Adafruit_GPS(SPIClass *theSPI, int8_t cspin); // Constructor when using SPI
   Adafruit_GPS(); // Constructor for no communications, just data storage
   void common_init(void);
@@ -100,6 +101,7 @@ public:
   size_t write(uint8_t);
   char read(void);
   void sendCommand(const char *);
+  void sendCommand(uint8_t *data, uint8_t len);
   bool newNMEAreceived();
   void pause(bool b);
   char *lastNMEA(void);
@@ -310,6 +312,8 @@ private:
   volatile char *lastline;      ///< Pointer to previous line buffer
   volatile bool recvdflag;      ///< Received flag
   volatile bool inStandbyMode;  ///< In standby flag
+
+  int8_t rx_or_sda = -1,tx_or_scl = -1;
 };
 /**************************************************************************/
 

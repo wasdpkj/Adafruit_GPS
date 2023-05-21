@@ -39,17 +39,33 @@ static bool strStartsWith(const char *str, const char *prefix);
     @returns True on successful hardware init, False on failure
 */
 /**************************************************************************/
-bool Adafruit_GPS::begin(uint32_t baud_or_i2caddr) {
+bool Adafruit_GPS::begin(uint32_t baud_or_i2caddr, int8_t rxPin_or_sda, int8_t txPin_or_scl) {
 #if (defined(__AVR__) || defined(ESP8266)) && defined(USE_SW_SERIAL)
   if (gpsSwSerial) {
     gpsSwSerial->begin(baud_or_i2caddr);
   }
 #endif
   if (gpsHwSerial) {
-    gpsHwSerial->begin(baud_or_i2caddr);
+    if(rxPin_or_sda >= 0 || txPin_or_scl >= 0){   //begin 优先级最高
+      gpsHwSerial->begin(baud_or_i2caddr, SERIAL_8N1, rxPin_or_sda, txPin_or_scl);
+    }
+    else if(rx_or_sda >= 0 || tx_or_scl >= 0){
+      gpsHwSerial->begin(baud_or_i2caddr, SERIAL_8N1, rx_or_sda, tx_or_scl);
+    }
+    else{
+      gpsHwSerial->begin(baud_or_i2caddr);
+    }
   }
   if (gpsI2C) {
-    gpsI2C->begin();
+    if(rxPin_or_sda >= 0 && txPin_or_scl >= 0){   //begin 优先级最高
+      gpsI2C->begin(rxPin_or_sda, txPin_or_scl);
+    }
+    else if(rx_or_sda >= 0 && tx_or_scl >= 0){
+      gpsI2C->begin(rx_or_sda, tx_or_scl);
+    }
+    else{
+      gpsI2C->begin();
+    }
     if (baud_or_i2caddr > 0x7F) {
       _i2caddr = GPS_DEFAULT_I2C_ADDR;
     } else {
@@ -91,7 +107,9 @@ Adafruit_GPS::Adafruit_GPS(SoftwareSerial *ser) {
     @param ser Pointer to a HardwareSerial object
 */
 /**************************************************************************/
-Adafruit_GPS::Adafruit_GPS(HardwareSerial *ser) {
+Adafruit_GPS::Adafruit_GPS(HardwareSerial *ser, int8_t pin_rx_sda, int8_t pin_tx_scl) {
+  rx_or_sda = pin_rx_sda;
+  tx_or_scl = pin_tx_scl;
   common_init();     // Set everything to common state, then...
   gpsHwSerial = ser; // ...override gpsHwSerial with value passed.
 }
@@ -113,7 +131,9 @@ Adafruit_GPS::Adafruit_GPS(Stream *data) {
     @param theWire Pointer to an I2C TwoWire object
 */
 /**************************************************************************/
-Adafruit_GPS::Adafruit_GPS(TwoWire *theWire) {
+Adafruit_GPS::Adafruit_GPS(TwoWire *theWire, int8_t pin_rx_sda, int8_t pin_tx_scl) {
+  rx_or_sda = pin_rx_sda;
+  tx_or_scl = pin_tx_scl;
   common_init();    // Set everything to common state, then...
   gpsI2C = theWire; // ...override gpsI2C
 }
@@ -383,7 +403,15 @@ char Adafruit_GPS::read(void) {
     @param str Pointer to a string holding the command to send
 */
 /**************************************************************************/
-void Adafruit_GPS::sendCommand(const char *str) { println(str); }
+void Adafruit_GPS::sendCommand(const char *str) { Print::println(str); }
+
+/**************************************************************************/
+/*!
+    @brief Send a command to the GPS device
+    @param uint8_t* Pointer to a data holding the command to send
+*/
+/**************************************************************************/
+void Adafruit_GPS::sendCommand(uint8_t *data, uint8_t len) { Print::write(data, len); }
 
 /**************************************************************************/
 /*!
